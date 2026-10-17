@@ -35,5 +35,3 @@ Only Chromium, cash-on-delivery checkout, and reset-request responses are covere
 ## Documentation and submission
 
 [Description.md](Description.md) lists the test cases; [Prompt.md](Prompt.md) records redacted AI inputs; [Review.md](Review.md) explains corrections and decisions.
-
-Publish the repository publicly on GitHub and submit its URL through the course Google Form by **October 23**. Include the documentation and screenshot evidence.
