@@ -1,298 +1,443 @@
-# AI Prompt Log
+# AI Conversation Log
 
-## Tool and scope
-
-- **AI tool:** GPT-5.6 Extra-High.
+- **AI tool/model label recorded in the project:** GPT-5.6 Sol Extra-High.
 - **Project:** SIS 2 — Test Automation with Playwright, using Go.
 - **Website:** https://practicesoftwaretesting.com/
-- **Source:** The original `Prompt.md` export and the subsequent messages available in this conversation.
 
-## How to read this record
+## Reading this log
 
-This is an **edited, privacy-redacted prompt log**, not a complete verbatim transcript. Quoted requests retain their original wording, apart from labeled redactions of local paths and terminal prompts. Headings and context notes were added for readability.
+These are **selected user messages and actual assistant reply excerpts** from the saved export and this conversation. They are not rewritten summaries. Markdown formatting and local file links have been normalized for readability.
 
-- `[CODE OMITTED]` replaces a full code submission.
-- `[HTML OMITTED]` replaces copied page markup.
-- `[OUTPUT OMITTED]` replaces terminal output, installation logs, or repeated results.
-- `[DOCUMENT OMITTED]` replaces a document pasted as context.
-- `[REDACTED]` replaces personal information, account credentials, or local paths.
+`...` marks omitted code, HTML, terminal output, or parts of a long answer. `[REDACTED]` replaces personal information or local paths. The log is intentionally abbreviated, so it is not a complete verbatim transcript. Historical advice and results may have been corrected in later exchanges.
 
-Passwords, personal email addresses, customer details, and full source-code dumps are not reproduced here. Context notes describe omitted material; they are editorial summaries, not invented prompts. The original chat contains the full inputs. Assistant responses are excluded from this prompt log; the student's review and corrections belong in `Review.md`.
+## 01. Understanding the assignment
 
-## 1. Understanding the assignment and starting the project
-
-### Prompt 01 — Explain the task
+**User**
 
 > explain me the task for sis asignment
 > what should I do there?
 
-Context: `Week_6_Masters_ST.pptx` was attached. Its local filesystem path is `[REDACTED]`.
+**Assistant**
 
-### Prompt 02 — Provide the assignment requirements
-
-> SIS 2
-> Test Automation with Playwright
-> DEADLINE - Oct 23
-> LINK to Site to be tested
-> https://practicesoftwaretesting.com/
+> Your SIS 2 assignment is to create automated browser tests with Playwright for the Toolshop website. Submit your code as a repository.
 >
-> 1. At least 5 AT suits mentioned in the Pres - use any language you want with the Playwright framework.
-> 2. Description.md - file: explain what you want to do
->    1. List of TCs to be automated
-> 3. Prompt.md file save exactly the prompt you used for the AI tool; mark exactly which tool you gonna use, like Claude Opus 5 Max efforts, etc
-> 4. Review.md: explain what the AI results were about, how you reviewed and modified them, and justify your decisions
-> 5. Screenshots - AI response, Run results or whatever you think matters
-> 6. Link to public GitHub repository.
-> 7. Google Forms link
+> ...
 
-Formatting note: Links, line breaks, and numbering in this pasted brief have been normalized for Markdown. The model example above is part of the assignment wording, not a claim about the tool used.
+## 02. Asking for guidance only
 
-### Prompt 03 — Ask for step-by-step guidance
-
-> let's start from begining intialize the project and navigate me step by step what should I do not writing code for myslef
-
-### Prompt 04 — Clarify who should do the work
+**User**
 
 > don't do anything for me, just navigate me from start how to do this project
 
-### Prompt 05 — Share installation and initial results
+**Assistant**
 
-[OUTPUT OMITTED: Playwright's npm installer output, browser downloads, two passing Chromium example tests, and starting/stopping the HTML report server. The same log was pasted several times; repeated copies and local terminal paths are omitted.]
+> I misunderstood. I’ll guide you one step at a time, and you’ll perform the work yourself. Leave the files I created earlier aside and start in a fresh folder.
+>
+> ...
 
-### Prompt 06 — Introduce the project description
+## 03. Reviewing the first browser fixture
 
-> here is my description md
+**User — code excerpt**
 
-### Prompt 07 — Submit the description for review
+```go
+package fixtures
+...
+func NewPage (t *testing.T) playwright.Page{
+...
+}
+```
 
-[DOCUMENT OMITTED: The draft `Description.md` identified Go/Golang and the five workflows: registration, login, purchase, product comparison, and password reset.]
+**Assistant**
 
-## 2. Go setup and browser fixtures
+> Your setup sequence is correct. Fix these points before we use the helper:
+> 1. Change t.Fatal to t.Fatalf in the context error check.
+>    Fatalf formats %v; Fatal does not.
+>
+> ...
+>
+> 2. Register cleanup immediately after each resource is successfully created.
+>
+> ...
+>
+> 3. Use t.Errorf for errors inside cleanup callbacks.
+>    This records the cleanup failure while allowing that callback to finish. Keep t.Fatalf for setup failures.
+>
+> ...
 
-### Prompt 08 — Confirm Go is installed
+## 04. Reviewing the homepage assertion
 
-[OUTPUT OMITTED: `go version` reported Go 1.26.1 on darwin/arm64.]
+**User — code excerpt**
 
-### Prompt 09 — Share module setup
+```go
+func (h *HomePage) ExpectLoaded() error {
+    ...
+    err := assert.Page(h.page).ToHaveTitle(
+        "Practice Software Testing",
+    )
+    return err
+}
+```
 
-[OUTPUT OMITTED: `go mod init sis2`, installation of `github.com/mxschmitt/playwright-go`, and confirmation that version `v0.6201.1` was installed.]
+**Assistant**
 
-### Prompt 10 — Share Chromium installation
+> Your struct, constructor, and navigation method look correct. The title assertion needs one change: a string checks the complete title, while your requirement is to check that it contains Practice Software Testing.
+> Add regexp to your imports and change the argument to:
 
-[OUTPUT OMITTED: The Playwright Go CLI successfully downloaded Chromium and its headless shell. Local cache paths are redacted.]
+```go
+regexp.MustCompile("Practice Software Testing")
+```
 
-### Prompt 11 — Confirm completion
+> ...
 
-> finished
 
-### Prompt 12 — Submit the first browser fixture
+## 05. Resuming product comparison
 
-[CODE OMITTED: Initial `fixtures.NewPage(t)` implementation with Playwright startup, Chromium launch, context creation, page creation, and browser cleanup.]
-
-### Prompt 13 — Submit the revised fixture
-
-[CODE OMITTED: Updated browser fixture with cleanup for Playwright, the browser, and the browser context.]
-
-[OUTPUT OMITTED: `gofmt` and `go test ./fixtures`; the package compiled with no test files.]
-
-## 3. Homepage and reusable page objects
-
-### Prompt 14 — Submit the homepage object
-
-[CODE OMITTED: `HomePage`, its constructor, `Open()`, and `ExpectLoaded()`.]
-
-[OUTPUT OMITTED: Formatting and successful compilation of the pages package.]
-
-### Prompt 15 — Submit the homepage test
-
-[CODE OMITTED: `TestHomePageLoads` using a fixture, navigation, and a homepage assertion.]
-
-[OUTPUT OMITTED: The homepage browser test passed.]
-
-### Prompt 16 — Clarify the fixture's return type
-
-[CODE OMITTED: A browser fixture returning `*pages.HomePage` instead of a raw `playwright.Page`.]
-
-### Prompt 17 — Share the result after refactoring
-
-[OUTPUT OMITTED: `go test ./tests` passed after separating browser setup from homepage-object construction.]
-
-## 4. Login tests
-
-### Prompt 18 — Provide manually inspected login details
-
-[HTML OMITTED: Email and password inputs, the login submit button, the invalid-login error, and the signed-in navigation element.]
-
-Context supplied:
-
-- Login URL: `https://practicesoftwaretesting.com/auth/login`.
-- Test IDs: `email`, `password`, `login-submit`, and `nav-menu`.
-- Invalid-login text: `Invalid email or password`.
-- Successful-login URL: `https://practicesoftwaretesting.com/account`.
-- Signed-in customer's name: `[REDACTED]`.
-
-### Prompt 19 — Submit the login page object
-
-[CODE OMITTED: `LoginPage` with `Open()`, `SignIn()`, `ExpectSignedIn()`, and `ExpectInvalidCredentials()`.]
-
-[OUTPUT OMITTED: Successful compilation of the pages and fixtures packages.]
-
-### Prompt 20 — Submit login results and test data
-
-[OUTPUT OMITTED: Both login tests passed; the formatting command also referenced a nonexistent `fixtures/pages.go`.]
-
-[CODE OMITTED: `Customer` and `DemoCustomer()`. Personal email, password, and display name are redacted.]
-
-### Prompt 21 — Submit the login tests and negative assertion
-
-[CODE OMITTED: Parallel valid-login and invalid-password tests, plus the updated `ExpectInvalidCredentials()` URL assertion. Credentials and the submitted password strings are redacted.]
-
-## 5. Registration tests
-
-### Prompt 22 — Provide registration observations
-
-[HTML OMITTED: Inspected registration fields and selectors.]
-
-Context supplied: registration URL, required field test IDs, `YYYY-MM-DD` date format, password requirements, country option, and redirect to the login page without a success message. Personal customer values are redacted.
-
-### Prompt 23 — Submit the registration data factory
-
-[CODE OMITTED: Expanded `Customer` struct and `NewRegistrationCustomer()` with a unique email. Passwords, customer details, and address/contact values are redacted.]
-
-[OUTPUT OMITTED: Formatting and successful compilation of the data package.]
-
-### Prompt 24 — Submit the registration page object
-
-[CODE OMITTED: `RegistrationPage`, field-filling logic, country selection, submission, and login-redirect assertion.]
-
-[OUTPUT OMITTED: Successful compilation of the pages and data packages.]
-
-### Prompt 25 — Submit the registration test and results
-
-[CODE OMITTED: Independent registration test using a fresh customer, followed by login with that account.]
-
-[OUTPUT OMITTED: Two passing registration runs and formatting messages about nonexistent filenames.]
-
-## 6. Product comparison and changes to the working approach
-
-### Prompt 26 — Provide product observations
-
-[HTML OMITTED: Full catalogue cards, dynamic product IDs, SVG icons, and product-detail markup.]
-
-Context supplied:
-
-- Product A: `Combination Pliers`, observed price `$14.15`.
-- Product B: `Pliers`, observed price `$12.01`.
-- Catalogue URL: `https://practicesoftwaretesting.com/category/hand-tools`.
-- Detail test IDs: `product-name` and `unit-price`.
-
-The originally stated relationship was:
-
-> Expected price relationship:product a costs less than product b
-
-Context note: This statement is preserved as a historical input. The later comparison test checks A > B, consistent with the observed prices.
-
-### Prompt 27 — Request implementation of the remaining tests
-
-> okay now please finish the rest of the tests by yourself the project located under the [REDACTED: local project path and terminal prompt] in the same way I did previous tests, format naming and so on don't change previous tests that I have already done
-
-### Prompt 28 — Request the changes be reverted
-
-> revert it back and let me do it myself
-
-Context note: The assistant's additions from that implementation attempt were reverted. The user then resumed writing the tests with guidance.
-
-### Prompt 29 — Resume the guided work
+**User**
 
 > let's continue
 
-### Prompt 30 — Submit the initial product page object
+**Assistant**
 
-[CODE OMITTED: `ProductPage`, its constructor, and `Open(url string)`.]
+> Let’s continue with **product comparison**, one file at a time.
+>
+> First, correct the expected result: **Combination Pliers ($14.15) costs more than Pliers ($12.01)**, so your test should check **A > B**.
+>
+> Your next step is to create `pages/product.go`, following the pattern in your `pages/login.go`:
+>
+> ...
 
-### Prompt 31 — Request larger steps
+## 06. Asking for larger implementation steps
+
+**User**
+
+```go
+func (p *ProductPage) ExpectName(expectedName string) error {
+    ...
+}
+```
 
 > let's do bigger steps at a time
 
-### Prompt 32 — Repeat the request with the updated method
+**Assistant**
 
-[CODE OMITTED: `ProductPage.ExpectName(expectedName string)`.]
+> Your `ExpectName()` is correct. **Let’s finish the entire product-comparison test in this batch.** You’ll implement four files.
+>
+> 1. **Finish `pages/product.go`.**
+>
+> Keep your existing methods and add:
 
-> let's do bigger steps at a time
+```go
+func (p *ProductPage) Name() (string, error)
+func (p *ProductPage) Price() (float64, error)
+```
 
-### Prompt 33 — Share the comparison result and request direct file review
+> ...
+>
+> Based on your collected prices, the expected relationship is **$14.15 > $12.01**. Compare the values read from the website.
+>
+> ...
 
-[OUTPUT OMITTED: `TestCompareTwoProducts` passed and logged Combination Pliers at $14.15 and Pliers at $12.01.]
+## 07. Reviewing the passing comparison test
+
+**User — terminal excerpt and request**
+
+```text
+go test ./tests -run '^TestCompareTwoProducts$' -v -count=1
+...
+    compare_test.go:57: Combination Pliers: $14.15; Pliers: $12.01
+--- PASS: TestCompareTwoProducts (5.82s)
+PASS
+...
+```
 
 > view them in the folder yourself
 
-## 7. Password-reset request tests
+**Assistant**
 
-### Prompt 34 — Provide password-reset observations
+> I reviewed all four files. **Your comparison test is implemented correctly**, and your terminal output confirms it passes.
+>
+> ...
+>
+> One correction to my earlier example: your `*playwright.AriaRoleHeading` correctly includes the dereference required by your installed binding.
+>
+> ...
 
-[HTML OMITTED: Full markup for the success and error alerts.]
+## 08. Planning the password-reset tests
 
-Context supplied:
+**User — observation excerpt**
 
-- URL: `https://practicesoftwaretesting.com/auth/forgot-password`.
-- Test IDs: `email` and `forgot-password-submit`.
-- Registered-email response: `page.forgot-password.confirm`.
-- Unregistered-email response: `The selected email is invalid.`
+> 1. Forgot-password URL. [https://practicesoftwaretesting.com/auth/forgot-password](https://practicesoftwaretesting.com/auth/forgot-password)
+>
+> ...
+>
+> 5. Whether submitting the request immediately changes the password or requires an email link. just show up alert
+>
+> ...
 
-The observation about what happened after submission was:
+**Assistant**
 
-> just show up alert
+> We can now build **both password-reset request tests** in one batch. The success alert shows an untranslated key; use the literal text you observed and note that UI issue in `Review.md`.
+>
+> ...
+>
+> Creating a fresh account keeps this test independent of your existing login account.
+>
+> ...
+>
+> These tests verify the reset-request responses. The success alert alone does not prove that the password changed.
+>
+> Send the terminal output afterward; I’ll review the files directly from your folder.
 
-### Prompt 35 — Repeat the password-reset observations
+## 09. Reviewing password-reset results
 
-[REPEATED CONTEXT OMITTED: The same forgot-password URL, selectors, success/error markup, and alert-only observation were submitted again.]
-
-### Prompt 36 — Share the reset-test results
-
-[OUTPUT OMITTED: Both known-email and unknown-email reset tests passed. The formatting command referenced a nonexistent `fixtures/password_reset.go`; the fixture was stored in `fixtures/browser.go`.]
-
-## 8. Purchase and checkout
-
-### Prompt 37 — Provide checkout observations
-
-[HTML OMITTED: Full address form, country-option list, and checkout markup.]
-
-[DOCUMENT OMITTED: The observations table covering product quantity, cart contents, checkout transitions, billing, payment, and completion.]
-
-Public UI details supplied included:
-
-- Quantity increase and add-to-cart test IDs: `increase-quantity`, `add-to-cart`.
-- Checkout URL: `https://practicesoftwaretesting.com/checkout`.
-- Cart test IDs: `product-title`, `product-quantity`, `product-price`, `cart-total`.
-- Proceed buttons observed: `proceed-1`, `proceed-3`.
-- Billing test IDs: `country`, `postal_code`, `house_number`, `street`, `city`, `state`.
-- Payment test ID/value: `payment-method` / `cash-on-delivery`.
-- Submission and response test IDs: `finish`, `payment-success-message`.
-- Payment response: `Payment was successful`.
-
-The signed-in customer's name and address/contact values are `[REDACTED]`.
-
-### Prompt 38 — Share a purchase-test failure
-
-[OUTPUT OMITTED: The full `TestBuyProduct` failure log and terminal paths.]
-
-Relevant error excerpt:
+**User — terminal excerpt**
 
 ```text
-complete billing address: Locator expected to have Value '10'
-Actual value:
-waiting for getByTestId('house_number')
-unexpected value ""
+gofmt -w pages/password_reset.go fixtures/password_reset.go tests/password_reset_test.go
+go test ./tests -run '^TestResetPassword' -v -count=1
+lstat fixtures/password_reset.go: no such file or directory
+...
+--- PASS: TestResetPasswordWithKnownEmail (6.88s)
+--- PASS: TestResetPasswordWithUnknownEmail (6.97s)
+PASS
+...
 ```
 
-## 9. Project review and prompt-log formatting
+**Assistant**
 
-### Prompt 39 — Request a complete review
+> **Both reset tests passed, and the code matches the planned cases.** I reviewed the files: the registered-email test creates its own account, the unknown-email test leaves its generated account unregistered, and both verify visible alerts and their exact text.
+>
+> The formatting error comes from the filename: your fixture is in [fixtures/browser.go](fixtures/browser.go). Keeping it there is fine. Use:
+
+```bash
+gofmt -w pages/password_reset.go fixtures/browser.go tests/password_reset_test.go
+```
+
+> ...
+
+## 10. Planning the purchase flow
+
+**User — HTML and observation excerpts**
+
+```html
+<div formgroupname="address" class="ng-dirty ng-touched ng-valid">
+...
+```
+
+```text
+...
+data-test="payment-method"
+value="cash-on-delivery"
+...
+```
+
+**Assistant**
+
+> We have enough to build the **complete purchase test**.
+>
+> One detail to verify manually: the public source suggests that the first **Confirm** validates payment, and another **Confirm** creates the invoice. It exposes `#order-confirmation` and `#invoice-number` afterward. Your final assertion should reach that invoice confirmation. [Payment implementation](https://github.com/testsmith-io/practice-software-testing/blob/main/sprint5/UI/src/app/checkout/payment/payment.component.ts)
+>
+> Implement this batch yourself:
+>
+> ...
+>
+> Check every returned error with a meaningful `t.Fatalf()` message.
+>
+> Then run:
+
+```bash
+gofmt -w pages/product.go pages/checkout.go fixtures/browser.go tests/purchase_test.go
+go test ./tests -run '^TestBuyProduct$' -v -count=1
+```
+
+> Send the output afterward; I’ll inspect your files directly.
+
+## 11. Debugging the house-number failure
+
+**User — terminal excerpt**
+
+```text
+go test ./tests -run '^TestBuyProduct$' -v -count=1
+...
+    purchase_test.go:67: complete billing address: Locator expected to have Value '10'
+        Actual value:
+...
+               - unexpected value ""
+--- FAIL: TestBuyProduct (16.24s)
+...
+```
+
+**Assistant**
+
+> The failure comes from [checkout.go:73](pages/checkout.go): you check that the house number is already `"10"` **before your code fills it**.
+>
+> `ToHaveValue()` waits for a value; it doesn’t enter one. The failure prevents execution from reaching your filling loop.
+>
+> Replace this initial check:
+
+```go
+ToHaveValue(customer.HouseNumber)
+```
+
+> with:
+
+```go
+ToBeVisible()
+```
+
+> Your loop below already fills the house number and waits for postcode lookup. Move the original `ToHaveValue(customer.HouseNumber)` assertion **after that loop** to verify the final value.
+>
+> ...
+
+## 12. Requesting a complete project review
+
+**User**
 
 > now check everything
 
-### Prompt 40 — Request a readable, redacted prompt log
+**Assistant**
+
+> **All five workflows are implemented, but the project still needs one code fix and submission documents.** I didn’t edit your files.
+>
+> 1. **Fix the successful-login URL** in [login.go:36](pages/login.go).
+>
+> `ExpectSignedIn()` currently expects `loginURL`. Change its expected URL to:
+
+```go
+"https://practicesoftwaretesting.com/account"
+```
+
+> Keep `loginURL` in `ExpectInvalidCredentials()`. The current success assertion can pass before the redirect or fail afterward, depending on timing.
+>
+> ...
+
+## 13. Requesting a readable, redacted prompt log
+
+**User**
 
 > remake prompt md in normal readable format md maybe when I give my code don't expose everything that I send maybe just beep it somehow
 
-The omissions and redaction labels in this document implement that request. They identify removed context explicitly rather than presenting shortened inputs as complete, verbatim prompts.
+**Assistant**
+
+> Updated [Prompt.md](Prompt.md) with readable sections and chronological prompts.
+>
+> Full code, HTML, and logs use labeled omission placeholders; personal details are redacted. The document clearly discloses these edits. Other project files are unchanged.
+
+## 14. Requesting the other documentation
+
+**User**
+
+> write review and description and Readme for me but don't write too much keep it simple checking all the boxes
+
+**Assistant**
+
+> Written concise versions of:
+>
+> - [Description.md](Description.md)
+> - [Review.md](Review.md)
+> - [README.md](README.md)
+>
+> They cover test cases, AI assistance, corrections, setup, and submission. The remaining login URL issue is documented. Code is unchanged.
+
+## 15. Asking about GitHub upload readiness
+
+**User**
+
+> now can I upload to github?
+
+**Assistant**
+
+> **Make these two fixes before uploading publicly:**
+>
+> 1. In [customer.go](data/customer.go), replace your personal email/password with dedicated demo credentials, or load them from environment variables.
+> 2. In [login.go:36](pages/login.go), change the successful-login assertion to expect:
+
+```go
+"https://practicesoftwaretesting.com/account"
+```
+
+> ...
+
+## 16. Fixing the shared login URL constant
+
+**User — terminal excerpt**
+
+```text
+go test ./... -v -count=1
+...
+    login_test.go:46: verify rejected login: Page URL expected to be 'https://practicesoftwaretesting.com/account'
+        Actual value: https://practicesoftwaretesting.com/auth/login
+...
+--- FAIL: TestLoginWithInvalidPassword (9.88s)
+...
+FAIL
+```
+
+**Assistant**
+
+> The shared `loginURL` constant now points to `/account`, so **both login assertions expect the account page**.
+>
+> In [login.go](pages/login.go), replace the constant with:
+
+```go
+const (
+    loginURL   = "https://practicesoftwaretesting.com/auth/login"
+    accountURL = "https://practicesoftwaretesting.com/account"
+)
+```
+
+> Then use:
+>
+> - **`ExpectSignedIn()`** → `ToHaveURL(accountURL)`
+> - **`ExpectInvalidCredentials()`** → `ToHaveURL(loginURL)`
+>
+> The invalid-password case correctly stayed on the login page; its expected URL was wrong.
+>
+> Run again:
+
+```bash
+gofmt -w pages/login.go
+go test ./... -v -count=1
+```
+
+## 17. Checking the successful full-suite run
+
+**User — terminal excerpt and request**
+
+```text
+go test ./... -v -count=1
+...
+--- PASS: TestResetPasswordWithUnknownEmail (5.01s)
+--- PASS: TestLoginWithInvalidPassword (5.65s)
+...
+--- PASS: TestCompareTwoProducts (6.29s)
+--- PASS: TestRegisterNewCustomer (6.46s)
+--- PASS: TestLoginWithValidCredentials (6.53s)
+--- PASS: TestResetPasswordWithKnownEmail (6.60s)
+--- PASS: TestBuyProduct (11.46s)
+PASS
+ok      sis2/tests      14.756s
+...
+```
+
+> check again
+
+**Assistant**
+
+> **The login assertions are now correct, and all 8 tests passed.** Three things remain before uploading publicly:
+>
+> 1. **Credentials:** your Gmail address and plaintext password are still in [customer.go](data/customer.go), including the staged copy. Replace them with dedicated demo credentials.
+> 2. **Git staging:** your corrected `login.go` is **not staged yet**. Git currently holds the older, incorrect version.
+> 3. **Documentation:** update `Review.md` to record the passing full suite and resolved login issue. Remove the outdated references to the pending login fix and TypeScript starter files from `README.md`.
+>
+> ...
+
+## 18. Requesting paired prompts and replies
+
+**User**
+
+> can you actlually write exact prompt I used and the answer you gave me in prompt.md in this conversation maybe no need to fill out everything you can use .... if the code or answer is too big in prompt.md file
+
+**Assistant — initial response in this turn**
+
+> I’ll rewrite `Prompt.md` as user/assistant exchanges, using the actual wording available in this conversation. I’ll mark long code and answer omissions with `...` and keep credentials and personal details redacted.

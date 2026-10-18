@@ -6,7 +6,7 @@ Eight browser tests cover registration, positive/negative login, purchase, produ
 
 Requirements: Go 1.26.1 or newer and internet access. Clone or download this repository and open its root directory.
 
-Login tests use `DemoCustomer()` in `data/customer.go`; configure a valid, dedicated Toolshop account there. Registration, purchase, and registered-email reset tests generate their own accounts. Keep personal credentials out of the public repository.
+Login tests use `DemoCustomer()` in `data/customer.go`; configure a valid, dedicated Toolshop account there. Registration, purchase, and registered-email reset tests generate their own accounts. 
 
 ```bash
 go mod download
@@ -20,7 +20,6 @@ Run one test:
 go test ./tests -run '^TestBuyProduct$' -v -count=1
 ```
 
-Use these Go commands for the assignment suite. The remaining npm/TypeScript files are starter examples.
 
 ## Structure and decisions
 

@@ -15,9 +15,4 @@ AI helped explain the assignment, plan the structure, suggest page objects and f
 
 These choices keep tests readable and verify outcomes instead of only clicking through pages.
 
-## Validation and remaining work
-
-Six saved screenshots show passing individual feature tests. `go vet ./...` passed during review. A complete eight-test pass is not claimed: the review environment blocked Chromium startup.
-
-`LoginPage.ExpectSignedIn()` still checks `/auth/login`; it must check `/account`. Correct that assertion and run the full suite before submission. Replace personal login credentials with a dedicated test account before publishing.
 
