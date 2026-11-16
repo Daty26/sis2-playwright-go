@@ -1,0 +1,31 @@
+name: Playwright tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Install Chromium and Linux dependencies
+        run: go run github.com/mxschmitt/playwright-go/cmd/playwright@v0.6201.1 install --with-deps chromium
+
+      - name: Run all tests sequentially
+        run: 
+          time go test ./... -v -count=1 -parallel=1
