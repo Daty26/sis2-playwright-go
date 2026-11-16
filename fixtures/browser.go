@@ -1,6 +1,8 @@
 package fixtures
 
 import (
+	"os"
+	"path/filepath"
 	"sis2/pages"
 	"testing"
 
@@ -51,6 +53,45 @@ func NewPage(t *testing.T) playwright.Page {
 	if err != nil {
 		t.Fatalf("couldn't create a page: %v", err)
 	}
+
+	t.Cleanup(func() {
+		if !t.Failed() {
+			return
+		}
+
+		t.Logf("Failure URL: %s", page.URL())
+
+		if title, err := page.Title(); err != nil {
+			t.Logf("Could not read title: %v", err)
+		} else {
+			t.Logf("Failure title: %s", title)
+		}
+
+		dir := filepath.Join("..", "test-results", t.Name())
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Logf("Could not create evidence directory: %v", err)
+			return
+		}
+
+		html, err := page.Content()
+		if err != nil {
+			t.Logf("Could not capture HTML: %v", err)
+		} else if err := os.WriteFile(
+			filepath.Join(dir, "page.html"),
+			[]byte(html),
+			0644,
+		); err != nil {
+			t.Logf("Could not save HTML: %v", err)
+		}
+
+		if _, err := page.Screenshot(playwright.PageScreenshotOptions{
+			Path:     playwright.String(filepath.Join(dir, "page.png")),
+			FullPage: playwright.Bool(true),
+			Timeout:  playwright.Float(5000),
+		}); err != nil {
+			t.Logf("Could not save screenshot: %v", err)
+		}
+	})
 	return page
 }
 
