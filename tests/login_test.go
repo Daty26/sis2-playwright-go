@@ -31,14 +31,19 @@ func TestLoginWithValidCredentials(t *testing.T) {
 func TestLoginWithInvalidPassword(t *testing.T) {
 	t.Parallel()
 
-	loginPage := fixtures.NewLoginPage(t)
-	customer := data.DemoCustomer()
-
-	if err := loginPage.Open(); err != nil {
-		t.Fatalf("open login page: %v", err)
+	registerPage, loginPage := fixtures.NewRegistrationPage(t)
+	customer := data.NewRegistrationCustomer()
+	if err := registerPage.Open(); err != nil {
+		t.Fatalf("open registration page: %v", err)
+	}
+	if err := registerPage.Registration(customer); err != nil {
+		t.Fatalf("register customer for invalid-password test: %v", err)
+	}
+	if err := registerPage.ExpectRedirectToLogin(); err != nil {
+		t.Fatalf("verify redirect to login: %v", err)
 	}
 
-	if err := loginPage.SignIn(customer.Email, "superpupertest@123123"); err != nil {
+	if err := loginPage.SignIn(customer.Email, customer.Password+"-wrong"); err != nil {
 		t.Fatalf("submit invalid password: %v", err)
 	}
 

@@ -1,6 +1,8 @@
 package pages
 
 import (
+	"fmt"
+	"net/url"
 	"sis2/data"
 
 	"github.com/mxschmitt/playwright-go"
@@ -15,7 +17,7 @@ func NewRegisterPage(page playwright.Page) *RegistrationPage {
 }
 
 func (p *RegistrationPage) Open() error {
-	_, err := p.page.Goto("https://practicesoftwaretesting.com/auth/register")
+	_, err := p.page.Goto(appURL("/auth/register"))
 	return err
 }
 func (p *RegistrationPage) Registration(customer data.Customer) error {
@@ -51,9 +53,24 @@ func (p *RegistrationPage) Registration(customer data.Customer) error {
 	if err != nil {
 		return err
 	}
-	return p.page.GetByTestId("register-submit").Click()
+	// Registration may take longer than the assertion's default five seconds
+	// when several browsers share an API. Wait for the actual POST response
+	// before checking the redirect, rather than retrying a still-pending request.
+	response, err := p.page.ExpectResponse(func(response playwright.Response) bool {
+		u, err := url.Parse(response.URL())
+		return err == nil && u.Path == "/users/register" && response.Request().Method() == "POST"
+	}, func() error {
+		return p.page.GetByTestId("register-submit").Click()
+	})
+	if err != nil {
+		return fmt.Errorf("wait for registration response: %w", err)
+	}
+	if !response.Ok() {
+		return fmt.Errorf("registration API returned HTTP %d", response.Status())
+	}
+	return nil
 }
 func (p *RegistrationPage) ExpectRedirectToLogin() error {
 	assert := playwright.NewPlaywrightAssertions()
-	return assert.Page(p.page).ToHaveURL("https://practicesoftwaretesting.com/auth/login")
+	return assert.Page(p.page).ToHaveURL(appURL("/auth/login"))
 }

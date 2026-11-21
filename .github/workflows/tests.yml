@@ -1,39 +1,145 @@
 name: Playwright tests
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      shards:
+        description: Number of shards (use 1 for the timing baseline)
+        type: choice
+        options: ['4', '1']
+        default: '4'
+      verify_failure:
+        description: Intentionally fail the homepage test to verify artifacts
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  prepare:
+    name: Build and check CI tooling
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-
+    outputs:
+      indices: ${{ steps.matrix.outputs.indices }}
+      total: ${{ steps.matrix.outputs.total }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
+      - name: Compile every package and run static checks
+        run: |
+          go test ./... -run '^$' -count=1
+          go vet ./...
+      - name: Test shard coverage, retries and reporting
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Prepare shard matrix
+        id: matrix
+        env:
+          SHARDS: ${{ inputs.shards || '4' }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          total = int(os.environ['SHARDS'])
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'indices={json.dumps(list(range(1, total + 1)))}\n')
+              output.write(f'total={total}\n')
+          PY
 
+  test:
+    name: Tests (shard ${{ matrix.shard }}/${{ needs.prepare.outputs.total }})
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.prepare.outputs.indices) }}
+    env:
+      CI: 'true'
+      BASE_URL: http://localhost:4201
+      CI_VERIFY_FAILURE: ${{ inputs.verify_failure && 'TestHomePageLoads' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
       - name: Download Go dependencies
         run: go mod download
-
       - name: Install Chromium and Linux dependencies
         run: go run github.com/mxschmitt/playwright-go/cmd/playwright@v0.6201.1 install --with-deps chromium
-
-      - name: Run all tests sequentially
-        run: time go test ./... -v -count=1 -parallel=1
-
-      - name: Upload failure evidence
-        if: always()
+      - name: Read pinned application revision
+        id: toolshop
+        run: echo "revision=$(cat ci/toolshop-revision.txt)" >> "$GITHUB_OUTPUT"
+      - name: Check out Toolshop application
+        uses: actions/checkout@v7
+        with:
+          repository: testsmith-io/practice-software-testing
+          ref: ${{ steps.toolshop.outputs.revision }}
+          path: .ci/toolshop
+          persist-credentials: false
+      - name: Start isolated application, API and database
+        run: bash scripts/toolshop.sh up
+      - name: Run Playwright tests
+        run: python3 scripts/ci.py run --shard=${{ matrix.shard }}/${{ needs.prepare.outputs.total }} --workers=2
+      - name: Save application logs
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p test-results/shard-${{ matrix.shard }}
+          bash scripts/toolshop.sh logs > test-results/shard-${{ matrix.shard }}/application.log 2>&1
+      - name: Upload traces, results and every retry
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: failure-evidence
-          path: test-results/
-          retention-days: 7
-          if-no-files-found: ignore
+          name: test-results-${{ matrix.shard }}
+          path: test-results/shard-${{ matrix.shard }}/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Stop isolated application
+        if: always()
+        run: bash scripts/toolshop.sh down
+
+  merge-reports:
+    name: Merge reports
+    needs: [prepare, test]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download all shard results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: test-results-*
+          path: all-test-results
+      - name: Merge into HTML and JUnit, checking full suite coverage
+        if: ${{ !cancelled() }}
+        run: python3 scripts/ci.py merge --input=all-test-results --shards=${{ needs.prepare.outputs.total }}
+      - name: Upload merged HTML report with linked evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload merged JUnit
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-report
+          path: playwright-report/junit.xml
+          retention-days: 14
+          if-no-files-found: error

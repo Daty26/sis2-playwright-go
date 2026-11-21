@@ -49,6 +49,30 @@ func NewPage(t *testing.T) playwright.Page {
 			t.Errorf("couldn't close browser ctx: %v", err)
 		}
 	})
+	// The Go bindings do not have Playwright Test's config/retry reporter.
+	// Record every attempt so the original failure survives a successful retry.
+	if err := browserCtx.Tracing().Start(playwright.TracingStartOptions{
+		Screenshots: playwright.Bool(true),
+		Snapshots:   playwright.Bool(true),
+		Sources:     playwright.Bool(true),
+		Title:       playwright.String(t.Name()),
+	}); err != nil {
+		t.Fatalf("start trace: %v", err)
+	}
+	root := os.Getenv("TEST_RESULTS_DIR")
+	if root == "" {
+		root = filepath.Join("..", "test-results", "local")
+	}
+	dir := filepath.Join(root, filepath.FromSlash(t.Name()))
+	t.Cleanup(func() {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Errorf("create trace directory: %v", err)
+			return
+		}
+		if err := browserCtx.Tracing().Stop(filepath.Join(dir, "trace.zip")); err != nil {
+			t.Errorf("save trace: %v", err)
+		}
+	})
 	page, err := browserCtx.NewPage()
 	if err != nil {
 		t.Fatalf("couldn't create a page: %v", err)
@@ -67,7 +91,6 @@ func NewPage(t *testing.T) playwright.Page {
 			t.Logf("Failure title: %s", title)
 		}
 
-		dir := filepath.Join("..", "test-results", t.Name())
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Logf("Could not create evidence directory: %v", err)
 			return
@@ -92,6 +115,11 @@ func NewPage(t *testing.T) playwright.Page {
 			t.Logf("Could not save screenshot: %v", err)
 		}
 	})
+	// Cleanup runs in reverse order: mark the intentional failure before
+	// capturing the screenshot and trace. Only verification runs set this.
+	if os.Getenv("CI_VERIFY_FAILURE") == t.Name() {
+		t.Cleanup(func() { t.Error("intentional CI evidence check") })
+	}
 	return page
 }
 

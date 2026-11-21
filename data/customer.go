@@ -2,6 +2,7 @@ package data
 
 import (
 	"crypto/rand"
+	"os"
 	"strings"
 )
 
@@ -26,19 +27,15 @@ const (
 	lastName  = "Altayev"
 )
 
-func DemoCustomer() Customer {
-	return Customer{
-		Email:       "temirlanaltaev26092004@gmail.com",
-		Password:    "SuperPuperHardPass@1254",
-		DisplayName: firstName + " " + lastName,
-	}
-}
-
 func NewRegistrationCustomer() Customer {
-
+	password := os.Getenv("TEST_PASSWORD")
+	if password == "" {
+		// Disposable accounts need no personal credentials or repository secrets.
+		password = "T!" + rand.Text() + "9a"
+	}
 	return Customer{
-		Email:        "temirlan" + strings.ToLower(rand.Text()) + "@gmail.com",
-		Password:     "SuperPuperHardPass@1254",
+		Email:        "sis2" + strings.ToLower(rand.Text()) + "@example.test",
+		Password:     password,
 		DisplayName:  firstName + " " + lastName,
 		FirstName:    firstName,
 		LastName:     lastName,

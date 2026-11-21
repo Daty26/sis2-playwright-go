@@ -21,7 +21,7 @@ func NewCheckoutPage(page playwright.Page) *CheckoutPage {
 
 func (p *CheckoutPage) Open() error {
 	_, err := p.page.Goto(
-		"https://practicesoftwaretesting.com/checkout",
+		appURL("/checkout"),
 	)
 	return err
 }

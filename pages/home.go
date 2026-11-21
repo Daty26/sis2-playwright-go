@@ -14,7 +14,7 @@ func NewHomePage(page playwright.Page) *HomePage {
 	return &HomePage{page: page}
 }
 func (h *HomePage) Open() error {
-	_, err := h.page.Goto("https://practicesoftwaretesting.com/")
+	_, err := h.page.Goto(appURL("/"))
 	return err
 }
 func (h *HomePage) ExpectLoaded() error {
