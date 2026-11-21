@@ -4,8 +4,6 @@ import (
 	"github.com/mxschmitt/playwright-go"
 )
 
-const loginURL = "https://practicesoftwaretesting.com/auth/login"
-
 type LoginPage struct {
 	page playwright.Page
 }
@@ -15,7 +13,7 @@ func NewLoginPage(page playwright.Page) *LoginPage {
 }
 
 func (p *LoginPage) Open() error {
-	_, err := p.page.Goto("https://practicesoftwaretesting.com/auth/login")
+	_, err := p.page.Goto(appURL("/auth/login"))
 	return err
 }
 
@@ -33,7 +31,7 @@ func (p *LoginPage) SignIn(email, password string) error {
 }
 func (p *LoginPage) ExpectSignedIn(displayName string) error {
 	assert := playwright.NewPlaywrightAssertions()
-	if err := assert.Page(p.page).ToHaveURL("https://practicesoftwaretesting.com/account"); err != nil {
+	if err := assert.Page(p.page).ToHaveURL(appURL("/account")); err != nil {
 		return err
 	}
 	if err := assert.Locator(p.page.GetByTestId("nav-menu")).ToHaveText(displayName); err != nil {
@@ -47,5 +45,5 @@ func (p *LoginPage) ExpectInvalidCredentials() error {
 	if err := assert.Locator(p.page.GetByText("Invalid email or password")).ToBeVisible(); err != nil {
 		return err
 	}
-	return assert.Page(p.page).ToHaveURL(loginURL)
+	return assert.Page(p.page).ToHaveURL(appURL("/auth/login"))
 }

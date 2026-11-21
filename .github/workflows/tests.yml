@@ -1,39 +1,119 @@
 name: Playwright tests
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      shards:
+        description: Use 1 for the baseline or 4 for parallel tests
+        type: choice
+        options: ['4', '1']
+        default: '4'
+      verify_failure:
+        description: Intentionally fail the homepage test to check the artifacts
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  SHARDS: ${{ inputs.shards || '4' }}
+  BASE_URL: http://localhost:4201
+  TOOLSHOP_SOURCE: ${{ github.workspace }}/.ci/toolshop
 
 jobs:
   test:
+    name: Tests (shard ${{ matrix.shard }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.shards == '1' && '[1]' || '[1,2,3,4]') }}
+    env:
+      CI_VERIFY_FAILURE: ${{ inputs.verify_failure && 'TestHomePageLoads' || '' }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
-          cache-dependency-path: go.sum
-
-      - name: Download Go dependencies
-        run: go mod download
-
-      - name: Install Chromium and Linux dependencies
+      - name: Check the code and CI helper
+        run: |
+          go vet ./...
+          python3 -m unittest discover -s ci -p 'test_*.py' -v
+      - name: Install Chromium
         run: go run github.com/mxschmitt/playwright-go/cmd/playwright@v0.6201.1 install --with-deps chromium
-
-      - name: Run all tests sequentially
-        run: time go test ./... -v -count=1 -parallel=1
-
-      - name: Upload failure evidence
-        if: always()
+      - name: Check out the test application
+        uses: actions/checkout@v7
+        with:
+          repository: testsmith-io/practice-software-testing
+          ref: ae7caecb811dd8952c09d997e69be7cb946ecd44
+          path: .ci/toolshop
+          persist-credentials: false
+      - name: Start the test application
+        run: |
+          cp "$TOOLSHOP_SOURCE/sprint5/API/.env.example" "$TOOLSHOP_SOURCE/sprint5/API/.env"
+          sed -i 's/localhost:8091/localhost:8092/g' "$TOOLSHOP_SOURCE/sprint5/UI/src/environments/environment.ts"
+          docker compose -p sis2-ci -f ci/compose.yml up -d --wait mariadb
+          docker compose -p sis2-ci -f ci/compose.yml up -d laravel-api web angular-ui
+          docker compose -p sis2-ci -f ci/compose.yml exec -T -u root laravel-api sh -ec '
+            COMPOSER_MAX_PARALLEL_PROCESSES=1 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-req=ext-ffi
+            chown -R www-data:www-data storage bootstrap/cache
+            chmod -R ug+rwX storage bootstrap/cache
+            php artisan key:generate --force
+            php artisan jwt:secret --force
+            php artisan migrate:fresh --seed --force
+          '
+          for url in http://localhost:8092/status http://localhost:8092/products http://localhost:4201; do
+            curl --fail --silent --show-error --retry 120 --retry-delay 5 --retry-all-errors --retry-max-time 600 --max-time 5 "$url" -o /dev/null
+          done
+      - name: Run Playwright tests
+        run: python3 ci/runner.py run --shard=${{ matrix.shard }}/$SHARDS
+      - name: Save application logs
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p test-results/shard-${{ matrix.shard }}
+          docker compose -p sis2-ci -f ci/compose.yml logs --no-color > test-results/shard-${{ matrix.shard }}/application.log 2>&1
+      - name: Upload test results and traces
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: failure-evidence
-          path: test-results/
-          retention-days: 7
-          if-no-files-found: ignore
+          name: test-results-${{ matrix.shard }}
+          path: test-results/shard-${{ matrix.shard }}/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Stop the test application
+        if: always()
+        run: docker compose -p sis2-ci -f ci/compose.yml down --volumes --remove-orphans
+
+  merge-reports:
+    name: Merge reports
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: test-results-*
+          path: all-test-results
+      - name: Merge reports and validate evidence
+        if: ${{ !cancelled() }}
+        run: python3 ci/runner.py merge --input=all-test-results --shards=$SHARDS
+      - name: Upload HTML and JUnit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: error

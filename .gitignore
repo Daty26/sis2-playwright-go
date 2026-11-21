@@ -6,5 +6,11 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/.ci/
+/reports/
+/all-test-results/
+/.act-artifacts/
+/.secrets
+__pycache__/
 
 

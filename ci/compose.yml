@@ -1,0 +1,65 @@
+services:
+  mariadb:
+    image: yobasystems/alpine-mariadb:10.6.11
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TOOLSHOP_DB_PASSWORD:-ci-only-toolshop}
+      MYSQL_USER: toolshop
+      MYSQL_PASSWORD: ${TOOLSHOP_DB_PASSWORD:-ci-only-toolshop}
+      MYSQL_DATABASE: toolshop
+    healthcheck:
+      test: [CMD-SHELL, 'mysql -h 127.0.0.1 -u root -p"$$MYSQL_ROOT_PASSWORD" -e "SELECT 1"']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  laravel-api:
+    image: ${TOOLSHOP_API_IMAGE:-sis2-ci-api}
+    build:
+      context: ${TOOLSHOP_SOURCE}/_docker
+      dockerfile: api.docker
+      target: development
+    working_dir: /var/www
+    volumes:
+      - ${TOOLSHOP_SOURCE}/sprint5/API:/var/www
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: toolshop
+      DB_USERNAME: toolshop
+      DB_PASSWORD: ${TOOLSHOP_DB_PASSWORD:-ci-only-toolshop}
+      MAIL_MAILER: log
+      CACHE_DRIVER: file
+      QUEUE_CONNECTION: sync
+      DISABLE_LOGGING: "true"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  web:
+    image: ${TOOLSHOP_WEB_IMAGE:-sis2-ci-web}
+    build:
+      context: ${TOOLSHOP_SOURCE}/_docker
+      dockerfile: web.docker
+    volumes:
+      - ${TOOLSHOP_SOURCE}/sprint5/API:/var/www:ro
+    ports:
+      - "127.0.0.1:${TOOLSHOP_API_PORT:-8092}:80"
+    depends_on:
+      - laravel-api
+
+  angular-ui:
+    image: ${TOOLSHOP_UI_IMAGE:-sis2-ci-ui}
+    build:
+      context: ${TOOLSHOP_SOURCE}/_docker
+      dockerfile: ui.docker
+      target: development
+    working_dir: /app
+    volumes:
+      - ${TOOLSHOP_SOURCE}/sprint5/UI:/app
+    ports:
+      - "127.0.0.1:${TOOLSHOP_UI_PORT:-4201}:4200"
+    environment:
+      APP_VERSION: sis2-ci-pinned
+    command: >-
+      bash -c "npm ci --legacy-peer-deps --no-audit --no-fund &&
+      npm start -- --host 0.0.0.0 --port 4200"

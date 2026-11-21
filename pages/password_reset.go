@@ -12,7 +12,7 @@ func NewPasswordResetPage(page playwright.Page) *PasswordResetPage {
 
 func (p *PasswordResetPage) Open() error {
 	_, err := p.page.Goto(
-		"https://practicesoftwaretesting.com/auth/forgot-password",
+		appURL("/auth/forgot-password"),
 	)
 	return err
 }

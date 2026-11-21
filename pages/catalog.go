@@ -12,12 +12,18 @@ func NewCatalogPage(page playwright.Page) *CatalogPage {
 
 func (p *CatalogPage) Open() error {
 	_, err := p.page.Goto(
-		"https://practicesoftwaretesting.com/category/hand-tools",
+		appURL("/"),
 	)
 	return err
 }
 
 func (p *CatalogPage) OpenProduct(name string) error {
+	if err := p.page.GetByTestId("search-query").Fill(name); err != nil {
+		return err
+	}
+	if err := p.page.GetByTestId("search-submit").Click(); err != nil {
+		return err
+	}
 	return p.page.GetByRole(
 		*playwright.AriaRoleHeading,
 		playwright.PageGetByRoleOptions{
