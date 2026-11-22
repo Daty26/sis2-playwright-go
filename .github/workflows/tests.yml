@@ -76,7 +76,7 @@ jobs:
             curl --fail --silent --show-error --retry 120 --retry-delay 5 --retry-all-errors --retry-max-time 600 --max-time 5 "$url" -o /dev/null
           done
       - name: Run Playwright tests
-        run: python3 ci/runner.py run --shard=${{ matrix.shard }}/$SHARDS
+        run: python3 ci/runner.py run --shard="${{ matrix.shard }}/$SHARDS"
       - name: Save application logs
         if: ${{ !cancelled() }}
         run: |
@@ -108,7 +108,7 @@ jobs:
           path: all-test-results
       - name: Merge reports and validate evidence
         if: ${{ !cancelled() }}
-        run: python3 ci/runner.py merge --input=all-test-results --shards=$SHARDS
+        run: python3 ci/runner.py merge --input=all-test-results --shards="$SHARDS"
       - name: Upload HTML and JUnit report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
